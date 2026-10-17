@@ -32,6 +32,14 @@ export default function Schemes({ state }: { state: AppState }) {
 
   const worth = eligible.reduce((a, s) => a + s.annualWorthINR, 0);
 
+  // Explain the six most valuable. A worker cannot act on ten schemes at
+  // once, and a shorter list is also a cheaper and faster call. The rest are
+  // still listed below, straight from the corpus, with no model involved.
+  const EXPLAIN_LIMIT = 6;
+  const ranked = [...eligible].sort((a, b) => b.annualWorthINR - a.annualWorthINR);
+  const toExplain = ranked.slice(0, EXPLAIN_LIMIT);
+  const alsoEligible = ranked.slice(EXPLAIN_LIMIT);
+
   async function run() {
     setError(null);
     setBusy(true);
@@ -50,11 +58,20 @@ export default function Schemes({ state }: { state: AppState }) {
           dependents: profile.dependents,
           hasVehicle: profile.hasVehicle,
         },
-        eligibleIds: eligible.map((s) => s.id),
-        corpus: SCHEMES,
+        eligibleIds: toExplain.map((s) => s.id),
+        // Trimmed corpus: the model needs enough to rank and describe, not
+        // the steps and document lists the UI already renders locally. Fewer
+        // input tokens, and nothing for it to paraphrase incorrectly.
+        corpus: SCHEMES.map((s) => ({
+          id: s.id,
+          name: s.name,
+          what: s.what,
+          benefitValue: s.benefitValue,
+          cost: s.cost,
+        })),
       });
       // Never trust the model to stay inside the eligible set - enforce it.
-      setMatches(m.filter((x) => eligible.some((s) => s.id === x.id)));
+      setMatches(m.filter((x) => toExplain.some((s) => s.id === x.id)));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not check your schemes.');
     } finally {
@@ -89,6 +106,13 @@ export default function Schemes({ state }: { state: AppState }) {
           Nothing matched your details. Change your age, state or income in Settings and check again.
           We would rather show you nothing than show you a scheme you cannot get.
         </p>
+      )}
+
+      {matches && alsoEligible.length > 0 && (
+        <div className="banner" style={{ background: 'var(--surface-2)' }}>
+          <strong>Also open to you</strong>
+          {alsoEligible.map((s) => s.name).join(' · ')}
+        </div>
       )}
 
       {matches?.map((m, i) => {

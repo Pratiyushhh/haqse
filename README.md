@@ -165,11 +165,16 @@ React. One AI client, one error taxonomy, one state hook. Typecheck and tests bo
 - **Model tiering** — Haiku 5.5 for five of seven actions; Sonnet 5.5 only for messy receipt
   extraction and four-document drafting; **Opus is not used at all**, because nothing here needs
   it. See `GENAI.md` for the per-action rationale.
-- **Prompt caching** on the scheme corpus (large, stable, identical across workers).
+- **Send less, not more** — the scheme call explains only the six most valuable matches and gets a
+  trimmed corpus, because the steps and URLs are rendered locally. Measured: 193 input tokens.
 - **Response cache** at the gateway — identical payloads inside 10 minutes never reach the API.
+  Measured: 1191 ms to 0 ms on a repeat call.
 - **Images downscaled to 896px** client-side before encoding, which is the single biggest token
   saving in the app.
-- Extended thinking left off; `max_tokens` tuned per action. 60 KB gzipped bundle.
+- Extended thinking left off; `max_tokens` sized per action from measured output. 60 KB gzipped.
+- Prompt caching is declared on the scheme corpus but does **not** currently engage — after
+  trimming, that block sits below the minimum cacheable size. `GENAI.md` explains why it is left
+  in place rather than quietly claimed as a win.
 
 ### Testing
 24 unit tests over the calculators and the eligibility rules, covering the edge cases that
@@ -177,6 +182,10 @@ actually break this kind of app: empty ledgers, zero hours, unknown states, unkn
 first-time deduction labels, and age/income/state boundaries on every scheme rule.
 One of them caught a real bug during the build — the anomaly detector was including the payout
 under judgement in its own baseline, which let a large new deduction hide itself.
+
+All seven AI actions were additionally verified against the live API, including both vision
+actions against generated test documents. Document masking was asserted explicitly: the full
+licence number does not appear in the stored record.
 
 ### Accessibility
 Voice input *and* spoken output on every screen, with text fallbacks everywhere — nothing is

@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin } from 'vite';
+import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 
 /**
@@ -31,7 +31,18 @@ function aiGateway(): Plugin {
   };
 }
 
-export default defineConfig({
-  plugins: [react(), aiGateway()],
-  build: { target: 'es2022' },
+export default defineConfig(({ mode }) => {
+  // Vite only exposes VITE_-prefixed variables to client code, and it does not
+  // populate process.env at all. The dev gateway runs in the Vite process, so
+  // the server-side key is loaded here explicitly. The '' prefix means "load
+  // everything from .env", and because the value is only ever read inside
+  // api/ai.ts it still never reaches the browser bundle.
+  // On Vercel this block does nothing - the platform sets process.env itself.
+  const env = loadEnv(mode, process.cwd(), '');
+  if (env.ANTHROPIC_API_KEY) process.env.ANTHROPIC_API_KEY = env.ANTHROPIC_API_KEY;
+
+  return {
+    plugins: [react(), aiGateway()],
+    build: { target: 'es2022' },
+  };
 });

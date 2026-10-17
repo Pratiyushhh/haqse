@@ -16,15 +16,29 @@ cheapest model that does this well?"* — so Haiku 5.5 carries five of the seven
 |---|---|---|---|---|---|
 | 1 | `extract_receipt` | **Sonnet 5.5** | Real payout photos are messy — glare, crops, regional layouts, 10+ fields including a variable-length deduction list. Haiku dropped fields on cluttered screens; this is the one extraction worth the step up. | 900 | `src/features/Ledger.tsx` |
 | 2 | `extract_document` | **Haiku 5.5** | Four fixed fields off a standard government document, plus a masking rule. Well within Haiku. | 400 | `src/features/Documents.tsx` |
-| 3 | `chat` (Saathi) | **Haiku 5.5** | Short, grounded, multilingual replies over a context object we build. The reasoning is already done by `computeTotals` — the model is rephrasing, not deducing. | 600 | `src/features/Saathi.tsx` |
-| 4 | `match_schemes` | **Haiku 5.5** | Eligibility is decided by a deterministic rules engine before the call. The model only orders a short list and writes one sentence each. | 1200 | `src/features/Schemes.tsx` |
-| 5 | `draft_grievance` | **Sonnet 5.5** | Four documents in three registers plus a plain-language summary, all anchored to supplied facts with no invention. The flagship output; quality is visible here. | 3000 | `src/features/Grievance.tsx` |
+| 3 | `chat` (Saathi) | **Haiku 5.5** | Short, grounded, multilingual replies over a context object we build. The reasoning is already done by `computeTotals` — the model is rephrasing, not deducing. | 900 | `src/features/Saathi.tsx` |
+| 4 | `match_schemes` | **Haiku 5.5** | Eligibility is decided by a deterministic rules engine before the call. The model only orders the top six and writes one sentence each. | 3000 | `src/features/Schemes.tsx` |
+| 5 | `draft_grievance` | **Sonnet 5.5** | Four documents in three registers plus a plain-language summary, all anchored to supplied facts with no invention. The flagship output; quality is visible here. Measured at ~4.5k output tokens. | 8000 | `src/features/Grievance.tsx` |
 | 6 | `order_verdict` | **Haiku 5.5** | One sentence over numbers a pure function already computed. | 200 | `src/features/Safety.tsx` |
-| 7 | `safety_brief` | **Haiku 5.5** | Three bullets over measured weather values. | 350 | `src/features/Safety.tsx` |
+| 7 | `safety_brief` | **Haiku 5.5** | Three bullets over measured weather values. | 550 | `src/features/Safety.tsx` |
 
 **Non-AI external service:** Open-Meteo (`src/lib/api.ts` → `fetchWeather`) for live temperature,
 apparent temperature, humidity, rain and wind. Keyless on purpose, so every evaluator gets real
 live data with zero setup.
+
+---
+
+## How structured output is enforced
+
+These models accept neither an assistant prefill nor a forced `tool_choice` of type `"tool"` —
+both were tried, and the API rejects both. The gateway therefore offers a single `emit` tool and
+lets the model choose it, which it does reliably, making the reply a guaranteed-valid JSON
+object. If a model ever answered in prose instead, the text branch still parses it, so the
+behaviour degrades rather than breaks.
+
+A reply cut off by `max_tokens` loses its entire tool call and arrives as nothing at all. The
+gateway checks `stop_reason` and reports that as a truncation, rather than letting it surface as
+a mysterious empty result.
 
 ---
 
@@ -50,15 +64,29 @@ client before anything renders, so even a non-compliant reply cannot introduce a
 ## Cost controls
 
 1. **Thinking off.** Extended thinking is not enabled on any action. None of these tasks need it.
-2. **Prompt caching.** The scheme corpus is sent as a `cache_control: ephemeral` system block —
-   it is large, stable and identical for every worker, so it is written once and read cheaply
-   afterwards. `cache_read_input_tokens` is surfaced in the in-app AI log.
+2. **Send less, not more.** `match_schemes` explains only the six most valuable eligible schemes
+   and receives a trimmed corpus (id, name, description, benefit, cost) rather than the full
+   records — the steps, document lists and URLs are rendered locally and never need to make the
+   round trip. Measured result: **193 input tokens** for the whole scheme call.
 3. **Gateway response cache.** Identical payloads within 10 minutes are served from memory and
-   never reach the API — which also means an evaluator replaying a flow costs nothing.
+   never reach the API. Measured: 1191 ms to 0 ms on a repeat call. An evaluator replaying a flow
+   costs nothing.
 4. **Client-side image downscaling** to 896px / JPEG 0.8 before encoding. A 12 MP phone photo
    becomes roughly 120 KB. This is the largest single saving in the app.
-5. **Per-action `max_tokens`**, set to the real shape of each output rather than a global default.
+5. **Per-action `max_tokens`**, sized to the measured shape of each output rather than a global
+   default — and large enough that a reply is never cut off, since a truncated tool call returns
+   nothing usable at all rather than a shortened answer.
 6. **Input clamping** at the gateway: every string is length-capped before it enters a prompt.
+
+### A note on prompt caching
+
+The scheme corpus is still sent as a `cache_control: ephemeral` block, but **caching does not
+currently engage**: after the payload trimming above, that block sits far below Anthropic's
+minimum cacheable block size, so the API ignores the directive. Trimming the payload saved
+considerably more than caching it would have. The directive is left in place because the corpus
+is the one block that will grow — once it clears the minimum, caching starts working with no
+code change. The in-app AI log surfaces `cacheReadTokens`, so this stays visible rather than
+assumed.
 
 ---
 

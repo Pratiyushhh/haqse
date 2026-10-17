@@ -88,6 +88,8 @@ async function callClaude(opts: {
   json?: boolean;
   /** Deterministic actions are safe to cache; nothing user-private leaks. */
   cacheable?: boolean;
+  /** Abandon the call after this long. Defaults to 45s. */
+  timeoutMs?: number;
 }): Promise<string> {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) throw new Error('ANTHROPIC_API_KEY is not configured on the server.');
@@ -108,14 +110,35 @@ async function callClaude(opts: {
     }
   }
 
-  const messages: { role: 'user' | 'assistant'; content: ContentBlock[] | string }[] = [
-    { role: 'user', content: opts.content },
-  ];
-  // Prefill forces well-formed JSON without a schema round-trip.
-  if (opts.json) messages.push({ role: 'assistant', content: '{' });
+  const messages = [{ role: 'user' as const, content: opts.content }];
 
+  // Structured output.
+  //
+  // These models accept neither an assistant prefill nor a forced
+  // `tool_choice` of type "tool", so we offer a single `emit` tool and let
+  // the model choose it. In practice it always does, and the reply is then a
+  // guaranteed-valid JSON object. If a model ever answers in prose instead,
+  // the text branch below still parses it, so this degrades rather than
+  // breaks. The field shape lives in each action's system prompt; the schema
+  // only has to pin the output to an object.
+  const jsonTool = {
+    tools: [
+      {
+        name: 'emit',
+        description:
+          'Return the result as a JSON object in the shape the system prompt specifies. Always use this tool.',
+        input_schema: { type: 'object' as const, additionalProperties: true },
+      },
+    ],
+    tool_choice: { type: 'auto' as const },
+  };
+
+  // Serverless platforms cap function duration, so a request that would run
+  // past it is worth abandoning with a clear message rather than letting the
+  // socket drop and surfacing an opaque "fetch failed".
   const res = await fetch(API_URL, {
     method: 'POST',
+    signal: AbortSignal.timeout(opts.timeoutMs ?? 45_000),
     headers: {
       'content-type': 'application/json',
       'x-api-key': key,
@@ -124,9 +147,12 @@ async function callClaude(opts: {
     body: JSON.stringify({
       model: opts.model,
       max_tokens: opts.maxTokens,
-      temperature: opts.json ? 0 : 0.6,
+      // No `temperature`: it is deprecated on these models and the API
+      // rejects the request outright. JSON shape is enforced by the assistant
+      // prefill plus a strict schema in the system prompt instead.
       system: opts.system,
       messages,
+      ...(opts.json ? jsonTool : {}),
     }),
   });
 
@@ -136,7 +162,8 @@ async function callClaude(opts: {
   }
 
   const data = (await res.json()) as {
-    content?: { type: string; text?: string }[];
+    content?: { type: string; text?: string; input?: unknown }[];
+    stop_reason?: string;
     usage?: {
       input_tokens?: number;
       output_tokens?: number;
@@ -145,12 +172,18 @@ async function callClaude(opts: {
     };
   };
 
-  let text = (data.content ?? [])
-    .filter((b) => b.type === 'text')
-    .map((b) => b.text ?? '')
-    .join('');
-  if (opts.json) text = '{' + text; // put back the prefilled brace
+  const blocks = data.content ?? [];
+  const toolBlock = opts.json ? blocks.find((b) => b.type === 'tool_use') : undefined;
+  const text = toolBlock
+    ? JSON.stringify(toolBlock.input ?? {})
+    : blocks.filter((b) => b.type === 'text').map((b) => b.text ?? '').join('');
 
+  // A reply cut off by max_tokens loses its whole tool call, so it arrives as
+  // nothing at all rather than as a shortened answer. Name that precisely
+  // instead of reporting a generic empty response.
+  if (data.stop_reason === 'max_tokens' || (opts.json && (text === '{}' || text === '""'))) {
+    throw new Error('The reply was cut off before it finished. Try again with fewer details.');
+  }
   if (!text.trim()) throw new Error('The model returned an empty response.');
 
   LAST_USAGE = {
@@ -272,7 +305,10 @@ async function chat(body: Record<string, unknown>) {
 
   const text = await callClaude({
     model: MODELS.haiku,
-    maxTokens: 600,
+    // 900, not 600: Devanagari and other Indic scripts cost noticeably more
+    // tokens per sentence than Latin text, and a reply cut off mid-word is
+    // worse than a slightly dearer one.
+    maxTokens: 900,
     cacheable: true,
     system: [
       sys(`You are Saathi, a companion for Indian gig workers - delivery riders,
@@ -287,7 +323,8 @@ answer, say so plainly and tell them what to add to the app.
 
 You help with: what they earned and kept, what a deduction means, safety in
 heat and rain, welfare schemes, documents, and complaints. Be warm, brief and
-practical. At most 5 sentences unless they ask for steps.
+practical. At most 4 short sentences unless they ask for steps - finish
+your last sentence rather than running long.
 
 You are not a lawyer and you do not give legal advice; you help them
 understand their situation and write things down.`),
@@ -316,7 +353,9 @@ async function matchSchemes(body: Record<string, unknown>) {
 
   const text = await callClaude({
     model: MODELS.haiku,
-    maxTokens: 1200,
+    // Six schemes, two short sentences each, in a script that costs roughly
+    // three times as many tokens per character as Latin text.
+    maxTokens: 3000,
     json: true,
     cacheable: true,
     system: [
@@ -334,8 +373,11 @@ are schemes they appear to qualify for and should confirm at a CSC.
 
 Reply with ONLY JSON:
 { "matches": [ { "id": string, "whyYou": string, "firstStep": string } ] }
-whyYou is one personal sentence in ${language}. firstStep is the single thing
-to do today. Most valuable first. Every eligible ID, nothing extra.`),
+
+BE BRIEF - this is a phone screen, not a letter:
+- whyYou: ONE sentence, at most 20 words, personal to this worker.
+- firstStep: ONE action for today, at most 25 words.
+Most valuable first. Every ID you are given, and nothing else.`),
       // Large, stable, worker-independent -> worth caching.
       sys(`Scheme reference data:\n${corpus}`, true),
     ],
@@ -357,7 +399,10 @@ async function draftGrievance(body: Record<string, unknown>) {
 
   const text = await callClaude({
     model: MODELS.sonnet,
-    maxTokens: 3000,
+    // Four letters under an explicit 200-word cap each, plus a short summary.
+    // Sized above the measured ceiling, because a truncated tool call returns
+    // nothing usable at all rather than a shortened letter.
+    maxTokens: 4500,
     json: true,
     cacheable: true,
     system: [
@@ -384,8 +429,13 @@ labourLetter: formal English to the State Labour Commissioner. Mention the
 consumerLetter: consumer forum format with proper headings.
 workerSummary: in ${language}, Grade-5 reading level, explaining what was
   written and what happens next.
-Every letter must be complete and sendable, with a subject line and square
-bracket placeholders for anything you were not told.`),
+LENGTH LIMIT - this matters, a letter nobody finishes reading is useless and
+a reply that takes too long never arrives at all:
+- platformLetter, labourLetter, consumerLetter: at most 200 words EACH.
+- workerSummary: at most 80 words.
+Be complete but tight. Every letter needs a subject line, the key facts, the
+specific remedy asked for, and square bracket placeholders for anything you
+were not told. No throat-clearing and no repeated background.`),
     ],
     content: [
       { type: 'text', text: `Worker:\n<untrusted_data>${worker}</untrusted_data>` },
@@ -426,7 +476,7 @@ async function safetyBrief(body: Record<string, unknown>) {
 
   const text = await callClaude({
     model: MODELS.haiku,
-    maxTokens: 350,
+    maxTokens: 550,
     cacheable: true,
     system: [
       sys(`You brief a delivery rider on today's riding conditions in ${language}.
@@ -484,8 +534,14 @@ export default async function handler(req: Req, res: Res) {
   } catch (err) {
     // Deliberately no canned fallback content: a failed model call must look
     // like a failure, never like a plausible answer.
-    res.status(502).json({
-      error: err instanceof Error ? err.message : 'The AI service could not be reached.',
+    const timedOut =
+      err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError');
+    res.status(timedOut ? 504 : 502).json({
+      error: timedOut
+        ? 'That took too long and was stopped. Try again with a shorter description.'
+        : err instanceof Error
+          ? err.message
+          : 'The AI service could not be reached.',
       action,
     });
   }
