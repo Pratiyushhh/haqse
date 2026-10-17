@@ -1,0 +1,12 @@
+{
+  "name": "HaqSe - Gig Worker Companion",
+  "short_name": "HaqSe",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0e1411",
+  "theme_color": "#0b7a4b",
+  "description": "Earnings, rights, safety and grievance help for gig workers.",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
