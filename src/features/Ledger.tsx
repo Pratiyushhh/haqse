@@ -28,6 +28,8 @@ type Extraction = {
   note: string;
 };
 
+const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`;
+
 export default function Ledger({
   state,
   addEarning,
@@ -161,7 +163,7 @@ export default function Ledger({
         )}
       </Card>
 
-      <Card title="What you actually keep" sub={`${state.earnings.length} payouts, ${state.expenses.length} bills recorded`}>
+      <Card title="What you actually keep" sub={`${plural(state.earnings.length, 'payout')}, ${plural(state.expenses.length, 'bill')} recorded`}>
         {state.earnings.length === 0 ? (
           <p className="muted">
             Nothing recorded yet. Photograph one payout screen above and this page fills itself.

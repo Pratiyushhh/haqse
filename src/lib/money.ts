@@ -121,6 +121,18 @@ export type Anomaly = {
  * own history. The model is never asked whether something is an anomaly - it
  * is only asked to explain one we already found.
  */
+/**
+ * Deductions that are lawful and expected, so flagging them would send a
+ * worker to argue with their platform about statutory tax. The Detective
+ * exists to find money taken wrongly, not money taken correctly.
+ */
+const STATUTORY = ['tds', 'tax', 'gst', 'pf', 'epf', 'esi', 'esic', 'insurance premium'];
+
+export const isStatutory = (label: string): boolean => {
+  const l = label.trim().toLowerCase();
+  return STATUTORY.some((s) => l.includes(s));
+};
+
 export function detectAnomalies(earnings: Earning[]): Anomaly[] {
   const byDateDesc = [...earnings].sort((a, b) => b.date.localeCompare(a.date));
   const latest = byDateDesc[0];
@@ -138,6 +150,7 @@ export function detectAnomalies(earnings: Earning[]): Anomaly[] {
 
   const found: Anomaly[] = [];
   for (const d of latest.deductions) {
+    if (isStatutory(d.label)) continue;
     const key = d.label.trim().toLowerCase();
     const prior = history.get(key) ?? [];
 

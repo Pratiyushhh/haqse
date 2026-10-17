@@ -269,7 +269,9 @@ async function extractDocument(body: Record<string, unknown>) {
 
   const text = await callClaude({
     model: MODELS.haiku,
-    maxTokens: 400,
+    // Was 400, which sat exactly on the ceiling: the reply fitted only when
+    // the holder name was short, and a truncated tool call returns nothing.
+    maxTokens: 800,
     json: true,
     cacheable: true,
     system: [

@@ -6,6 +6,7 @@ import {
   decideOrder,
   detectAnomalies,
   estimateMinutes,
+  isStatutory,
   minWageHourly,
   type Earning,
   type Expense,
@@ -104,6 +105,29 @@ describe('detectAnomalies', () => {
 
   it('returns nothing for an empty ledger', () => {
     expect(detectAnomalies([])).toEqual([]);
+  });
+
+  it('never flags statutory deductions, however new or large', () => {
+    const found = detectAnomalies([
+      earning({
+        id: 'a',
+        date: '2026-10-02',
+        deductions: [
+          { label: 'TDS', amount: 20 },
+          { label: 'GST', amount: 95 },
+          { label: 'quality penalty', amount: 400 },
+        ],
+      }),
+    ]);
+    expect(found.map((a) => a.label)).toEqual(['quality penalty']);
+  });
+
+  it('recognises statutory labels regardless of case or wording', () => {
+    expect(isStatutory('TDS')).toBe(true);
+    expect(isStatutory('Income Tax deducted')).toBe(true);
+    expect(isStatutory('EPF contribution')).toBe(true);
+    expect(isStatutory('quality penalty')).toBe(false);
+    expect(isStatutory('late delivery fine')).toBe(false);
   });
 });
 
