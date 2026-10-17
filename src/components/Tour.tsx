@@ -46,7 +46,7 @@ const STEPS: Step[] = [
   {
     icon: '💬',
     title: 'Saathi — ask in your own language',
-    body: 'Speak or type in Hindi, Tamil, Bengali and seven more. Saathi answers using only your own saved payouts, so the numbers are yours, not invented.',
+    body: 'Ask in Hindi, Tamil, Bengali and seven more. Saathi answers using only your own saved payouts, so the numbers are yours, not invented.',
   },
   {
     icon: '🛡',

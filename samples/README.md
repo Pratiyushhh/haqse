@@ -31,7 +31,7 @@ it needs a clean week on file before it can tell that something is unusual.
 Once the ledger has data, the other flows have something real to work with:
 
 - **Saathi** → ask *"Aaj tak kitna bacha?"* — it answers from the payouts you just uploaded, and
-  refuses to invent anything they don't contain. Tap **🔊 Read aloud** to hear it.
+  refuses to invent anything they don't contain.
 - **Likho** → *"Swiggy ne quality penalty mein ₹400 kaat liye, galat tha"* — it pulls the flagged
   deduction in as evidence and writes four letters.
 - **Haq** → your matched schemes, ranked, with official links.

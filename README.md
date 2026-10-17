@@ -2,7 +2,7 @@
 
 **Tera kaam, tera hisaab, tera haq.** *(Your work, your accounts, your rights.)*
 
-A voice-first, multilingual assistant for Indian gig and informal workers — delivery riders,
+A multilingual assistant for Indian gig and informal workers — delivery riders,
 cab drivers and daily-wage workers. It turns the payout screenshots and bills already sitting
 in a worker's phone into a ledger, a rights map, a filed grievance and the first income proof
 they have ever been able to hand to a bank.
@@ -18,7 +18,7 @@ ships a working flow for each of the six, and they all read and write the same w
 | Brief requirement | Flow in HaqSe | Where |
 |---|---|---|
 | Earnings tracking | **Hisaab** — photo → ledger → true hourly rate → Deduction Detective → income certificate | `src/features/Ledger.tsx` |
-| Multilingual guidance | **Saathi** — voice/text agent in 10 languages, answering from real ledger data | `src/features/Saathi.tsx` |
+| Multilingual guidance | **Saathi** — assistant in 10 languages, answering from real ledger data | `src/features/Saathi.tsx` |
 | Rights & welfare schemes | **Haq Checker** — 12-scheme corpus, deterministic eligibility, cited sources | `src/features/Schemes.tsx`, `src/data/schemes.ts` |
 | Grievance / dispute drafting | **Likho** — four register-shifted letters built on real evidence | `src/features/Grievance.tsx` |
 | Document help | **Kaagaz** — document reading, masked numbers, expiry warnings with real penalties | `src/features/Documents.tsx` |
@@ -31,7 +31,7 @@ ships a working flow for each of the six, and they all read and write the same w
 Gig workers do not have a dashboard problem. They have a **proof problem**. They cannot prove
 what they earned (no payslip), what they spent (no books), or what the platform did to them (no
 record) — so every high-value thing in their life, a loan, a scheme application, a dispute, dies
-the moment someone asks "do you have proof?". HaqSe is a proof engine wearing a friendly voice.
+the moment someone asks "do you have proof?". HaqSe is a proof engine in plain language.
 
 ---
 
@@ -82,7 +82,7 @@ Ravi, 31, Delhi, three platforms:
 2. `computeTotals` → *"₹18,400 earned, ₹11,200 kept, ₹62/hour."*
 3. `compareToMinimumWage` → *"Delhi unskilled minimum is about ₹71/hour. You are short ₹9 every hour."*
 4. `detectAnomalies` → *"'quality penalty' ₹400 has never appeared on your payouts before."*
-5. He opens **Likho**, speaks one sentence in Hindi. The drafter pulls that flagged deduction and
+5. He opens **Likho**, writes one sentence in Hindi. The drafter pulls that flagged deduction and
    the surrounding payout rows as evidence and writes four letters.
 6. **Haq Checker** → 10 eligible schemes, each with its official URL and last-checked date.
 7. **Hisaab** → income certificate PDF for the loan he has been refused twice.
@@ -109,7 +109,7 @@ src/
 ├ lib/store.ts        local-first persistence + app state hook
 ├ lib/api.ts          AI client, image downscaling, weather
 ├ data/schemes.ts     scheme corpus + deterministic eligibility rules
-├ components/ui.tsx   shared UI, voice input/output
+├ components/ui.tsx   shared UI primitives
 ├ features/           one folder-free module per flow
 api/ai.ts             the AI gateway
 tests/money.test.ts   24 unit tests
@@ -193,24 +193,18 @@ actions against generated test documents. Document masking was asserted explicit
 licence number does not appear in the stored record.
 
 ### Accessibility
-Nothing speaks unless asked. Every generated reply carries a **Read aloud** button; the app never
-starts talking on its own, because a phone that does that is a problem on a road or in a
-customer'''s doorway. Spoken text is stripped of markdown first, so "**₹11,200**" is not read as
-"asterisk asterisk eleven thousand two hundred", and the voice is chosen by scoring what the
-device actually has — preferring natural/neural voices, avoiding the harsh compact fallbacks —
-then slowed slightly and softened.
+Built for a cheap Android held one-handed in sunlight, by someone who may read slowly.
 
 Photo inputs offer **both** camera and gallery. A paper bill wants the camera; a payout screen is
 usually already a screenshot, and a camera-only input makes that unreachable.
 
-A skippable six-step tour runs once on first open, skippable from step one, replayable from
-Settings, remembered in localStorage.
+A six-step tour runs once on first open, skippable from step one, replayable from Settings, and
+remembered in localStorage so it never interrupts twice.
 
-
-Voice input *and* spoken output on every screen, with text fallbacks everywhere — nothing is
-voice-only, and nothing is text-only. 52–56px touch targets, 16px base type, semantic landmarks,
-`aria-live` on every async region, visible focus rings, full keyboard operation, light and dark
-themes, `prefers-reduced-motion` respected, and a layout that holds at 320px.
+Model replies have their markdown stripped before display, so a bolded amount never reaches the
+screen as raw asterisks. 52-56px touch targets, 16px base type, semantic landmarks, `aria-live`
+on every async region, visible focus rings, full keyboard operation, light and dark themes,
+`prefers-reduced-motion` respected, and a layout that holds at 320px.
 
 ### Problem Statement Alignment
 All six required capabilities are built, each one reachable in two taps, each one sharing the
@@ -249,8 +243,10 @@ same profile so the flows compound rather than sit side by side.
   guess.
 - If a model call fails, the app shows the failure. There are **no canned fallback responses**
   anywhere, by design.
-- Speech recognition depends on the browser; where it is missing the mic button simply does not
-  render and typing works as normal.
+- **Voice input and spoken output are not in this build.** They were implemented, behaved
+  inconsistently across devices, and were removed rather than shipped half-working. Saathi and
+  Likho are text-only for now. The markdown-stripping helper they needed (`src/lib/text.ts`)
+  stays, because it also cleans model replies for display.
 
 ---
 

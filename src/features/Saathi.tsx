@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Busy, Card, ErrorNote, MicButton, plainText, SpeakButton } from '../components/ui';
+import { Busy, Card, ErrorNote, plainText } from '../components/ui';
 import { callAI } from '../lib/api';
 import { computeTotals, detectAnomalies } from '../lib/money';
 import type { AppState } from '../lib/store';
@@ -24,7 +24,6 @@ export default function Saathi({ state }: { state: AppState }) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
-  const [listening, setListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const { profile } = state;
@@ -64,8 +63,8 @@ export default function Saathi({ state }: { state: AppState }) {
         language: profile.language,
         context: buildContext(),
       });
-      // Deliberately silent: the reply is shown, and read aloud only if the
-      // worker asks for it with the Read aloud button.
+      // Markdown is stripped before display: the model sometimes bolds
+      // amounts, and raw asterisks are noise on a small screen.
       setTurns((t) => [...t, { role: 'saathi', text: plainText(answer) }]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not reach Saathi.');
@@ -77,7 +76,7 @@ export default function Saathi({ state }: { state: AppState }) {
   return (
     <Card
       title="Saathi"
-      sub={`Ask anything about your work, in ${profile.language}. Speak or type — both work.`}
+      sub={`Ask anything about your work and get a reply in ${profile.language}.`}
     >
       {turns.length === 0 && (
         <div>
@@ -99,11 +98,6 @@ export default function Saathi({ state }: { state: AppState }) {
           >
             <strong>{t.role === 'you' ? 'You' : 'Saathi'}</strong>
             {t.text}
-            {t.role === 'saathi' && (
-              <div style={{ marginTop: 8 }}>
-                <SpeakButton text={t.text} language={profile.language} />
-              </div>
-            )}
           </div>
         ))}
       </div>
@@ -118,17 +112,14 @@ export default function Saathi({ state }: { state: AppState }) {
         onChange={(e) => setInput(e.target.value)}
         placeholder="Aaj kitna bacha?"
       />
-      <div className="row" style={{ marginTop: 10 }}>
-        <MicButton
-          language={profile.language}
-          listening={listening}
-          setListening={setListening}
-          onText={(text) => void ask(text)}
-        />
-        <button className="primary" onClick={() => void ask(input)} disabled={busy || !input.trim()}>
-          Ask
-        </button>
-      </div>
+      <button
+        className="primary"
+        style={{ marginTop: 10 }}
+        onClick={() => void ask(input)}
+        disabled={busy || !input.trim()}
+      >
+        Ask
+      </button>
 
       <p className="muted" style={{ marginTop: 12 }}>
         Saathi reads only the payouts and bills you have saved on this phone. It is not a lawyer and

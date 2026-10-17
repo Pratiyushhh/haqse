@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Busy, Card, ErrorNote, MicButton } from '../components/ui';
+import { Busy, Card, ErrorNote } from '../components/ui';
 import { callAI } from '../lib/api';
 import { detectAnomalies, rupees } from '../lib/money';
 import { newId, type AppState, type Grievance as GrievanceRecord } from '../lib/store';
@@ -29,7 +29,6 @@ export default function Grievance({
 }) {
   const [narrative, setNarrative] = useState('');
   const [busy, setBusy] = useState(false);
-  const [listening, setListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [tab, setTab] = useState<(typeof TABS)[number][0]>('platformLetter');
@@ -81,7 +80,7 @@ export default function Grievance({
   return (
     <Card
       title="Likho — write my complaint"
-      sub="Say what happened. You get four letters: to the platform, to the Labour Commissioner, to the consumer forum, and one in your own language explaining what you just sent."
+      sub="Write what happened in your own words. You get four letters: to the platform, to the Labour Commissioner, to the consumer forum, and one in your own language explaining what you just sent."
     >
       {anomalies.length > 0 && (
         <div className="banner warn">
@@ -101,17 +100,14 @@ export default function Grievance({
         onChange={(e) => setNarrative(e.target.value)}
         placeholder="Swiggy ne 15 tareekh ko ₹400 kaat liya, bola late delivery. Us din baarish thi aur traffic jam tha."
       />
-      <div className="row" style={{ marginTop: 10 }}>
-        <MicButton
-          language={state.profile.language}
-          listening={listening}
-          setListening={setListening}
-          onText={(t) => setNarrative((n) => (n ? n + ' ' + t : t))}
-        />
-        <button className="primary" onClick={() => void run()} disabled={busy || !narrative.trim()}>
-          Write my letters
-        </button>
-      </div>
+      <button
+        className="primary"
+        style={{ marginTop: 10 }}
+        onClick={() => void run()}
+        disabled={busy || !narrative.trim()}
+      >
+        Write my letters
+      </button>
 
       {busy && <Busy label="Drafting four documents from your facts…" />}
       <ErrorNote error={error} />

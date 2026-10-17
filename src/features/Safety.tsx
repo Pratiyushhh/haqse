@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Busy, Card, ErrorNote, plainText, SpeakButton, Stat } from '../components/ui';
+import { Busy, Card, ErrorNote, plainText, Stat } from '../components/ui';
 import { callAI, fetchWeather, type Weather } from '../lib/api';
 import { locate } from '../data/places';
 import { computeTotals, decideOrder, estimateMinutes, rupees, type OrderVerdictMath } from '../lib/money';
@@ -119,9 +119,6 @@ export default function Safety({ state }: { state: AppState }) {
           <div className="banner ok" style={{ whiteSpace: 'pre-wrap' }}>
             <strong>Saathi&apos;s advice for today</strong>
             {brief}
-            <div style={{ marginTop: 8 }}>
-              <SpeakButton text={brief} language={profile.language} />
-            </div>
           </div>
         )}
 
@@ -189,9 +186,6 @@ export default function Safety({ state }: { state: AppState }) {
           <div className="banner ok">
             <strong>Saathi says</strong>
             {verdict}
-            <div style={{ marginTop: 8 }}>
-              <SpeakButton text={verdict} language={profile.language} />
-            </div>
           </div>
         )}
       </Card>
