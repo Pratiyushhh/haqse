@@ -100,14 +100,3 @@ export async function fetchWeather(lat: number, lon: number, place: string): Pro
     place,
   };
 }
-
-export const CITIES: Record<string, { lat: number; lon: number; state: string }> = {
-  Delhi: { lat: 28.61, lon: 77.21, state: 'Delhi' },
-  Mumbai: { lat: 19.08, lon: 72.88, state: 'Maharashtra' },
-  Bengaluru: { lat: 12.97, lon: 77.59, state: 'Karnataka' },
-  Hyderabad: { lat: 17.39, lon: 78.49, state: 'Telangana' },
-  Chennai: { lat: 13.08, lon: 80.27, state: 'Tamil Nadu' },
-  Kolkata: { lat: 22.57, lon: 88.36, state: 'West Bengal' },
-  Jaipur: { lat: 26.91, lon: 75.79, state: 'Rajasthan' },
-  Ahmedabad: { lat: 23.02, lon: 72.57, state: 'Gujarat' },
-};

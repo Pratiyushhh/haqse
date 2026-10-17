@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Busy, Card, ErrorNote, Stat } from '../components/ui';
-import { callAI, CITIES, fetchWeather, type Weather } from '../lib/api';
+import { Busy, Card, ErrorNote, plainText, SpeakButton, Stat } from '../components/ui';
+import { callAI, fetchWeather, type Weather } from '../lib/api';
+import { locate } from '../data/places';
 import { computeTotals, decideOrder, estimateMinutes, rupees, type OrderVerdictMath } from '../lib/money';
 import type { AppState } from '../lib/store';
 
@@ -29,7 +30,7 @@ export default function Safety({ state }: { state: AppState }) {
 
   useEffect(() => {
     let cancelled = false;
-    const city = CITIES[profile.city] ?? CITIES.Delhi!;
+    const city = locate(profile.state, profile.city);
     setBusy(true);
     setError(null);
     fetchWeather(city.lat, city.lon, profile.city)
@@ -41,7 +42,7 @@ export default function Safety({ state }: { state: AppState }) {
           trueHourly: totals.trueHourly,
           weather: w,
         }).then(({ brief: b }) => {
-          if (!cancelled) setBrief(b);
+          if (!cancelled) setBrief(plainText(b));
         });
       })
       .catch((err: unknown) => {
@@ -54,7 +55,7 @@ export default function Safety({ state }: { state: AppState }) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile.city, profile.language]);
+  }, [profile.state, profile.city, profile.language]);
 
   async function decide() {
     setDeciding(true);
@@ -74,7 +75,7 @@ export default function Safety({ state }: { state: AppState }) {
         language: profile.language,
         math: m,
       });
-      setVerdict(v);
+      setVerdict(plainText(v));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not get the verdict.');
     } finally {
@@ -116,8 +117,11 @@ export default function Safety({ state }: { state: AppState }) {
 
         {brief && (
           <div className="banner ok" style={{ whiteSpace: 'pre-wrap' }}>
-            <strong>Saathi's advice for today</strong>
+            <strong>Saathi&apos;s advice for today</strong>
             {brief}
+            <div style={{ marginTop: 8 }}>
+              <SpeakButton text={brief} language={profile.language} />
+            </div>
           </div>
         )}
 
@@ -185,6 +189,9 @@ export default function Safety({ state }: { state: AppState }) {
           <div className="banner ok">
             <strong>Saathi says</strong>
             {verdict}
+            <div style={{ marginTop: 8 }}>
+              <SpeakButton text={verdict} language={profile.language} />
+            </div>
           </div>
         )}
       </Card>

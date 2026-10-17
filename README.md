@@ -188,6 +188,20 @@ actions against generated test documents. Document masking was asserted explicit
 licence number does not appear in the stored record.
 
 ### Accessibility
+Nothing speaks unless asked. Every generated reply carries a **Read aloud** button; the app never
+starts talking on its own, because a phone that does that is a problem on a road or in a
+customer'''s doorway. Spoken text is stripped of markdown first, so "**₹11,200**" is not read as
+"asterisk asterisk eleven thousand two hundred", and the voice is chosen by scoring what the
+device actually has — preferring natural/neural voices, avoiding the harsh compact fallbacks —
+then slowed slightly and softened.
+
+Photo inputs offer **both** camera and gallery. A paper bill wants the camera; a payout screen is
+usually already a screenshot, and a camera-only input makes that unreachable.
+
+A skippable six-step tour runs once on first open, skippable from step one, replayable from
+Settings, remembered in localStorage.
+
+
 Voice input *and* spoken output on every screen, with text fallbacks everywhere — nothing is
 voice-only, and nothing is text-only. 52–56px touch targets, 16px base type, semantic landmarks,
 `aria-live` on every async region, visible focus rings, full keyboard operation, light and dark
@@ -205,7 +219,10 @@ same profile so the flows compound rather than sit side by side.
    official URL shown in the UI. The app says "schemes you *appear* to qualify for — confirm at a
    CSC" rather than asserting entitlement.
 2. **Minimum wage figures** are recent state notifications for unskilled work, divided to an
-   hourly rate. They move; the table is versioned in one place (`MIN_WAGE_PER_DAY`).
+   hourly rate. All 28 states and 8 union territories are covered, each with its major working
+   cities. They are revised twice a year, so they are approximations — the UI shows the
+   `WAGES_VERIFIED` date rather than quoting them as legal fact. One record per state in
+   `src/data/places.ts`.
 3. **Fuel price and mileage** default to ₹95/litre and 45 km/l and are editable in Settings,
    because they vary by city and vehicle.
 4. **Ride time** is estimated at 18 km/h door-to-door for city two-wheeler delivery.

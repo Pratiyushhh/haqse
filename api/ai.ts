@@ -312,6 +312,7 @@ async function chat(body: Record<string, unknown>) {
     // worse than a slightly dearer one.
     maxTokens: 900,
     cacheable: true,
+    timeoutMs: 30_000,
     system: [
       sys(`You are Saathi, a companion for Indian gig workers - delivery riders,
 cab drivers and daily-wage workers. You reply in ${language}. If the worker
@@ -407,6 +408,9 @@ async function draftGrievance(body: Record<string, unknown>) {
     maxTokens: 4500,
     json: true,
     cacheable: true,
+    // The slowest action, and the one worth waiting for. Kept under the
+    // 60s serverless function cap set in vercel.json.
+    timeoutMs: 55_000,
     system: [
       sys(`You draft grievance documents for Indian gig workers.
 ${INJECTION_GUARD}
@@ -457,6 +461,7 @@ async function orderVerdict(body: Record<string, unknown>) {
     model: MODELS.haiku,
     maxTokens: 200,
     cacheable: true,
+    timeoutMs: 20_000,
     system: [
       sys(`A calculator has already worked out whether a delivery order is worth
 taking. Say the verdict in ${language} in ONE or TWO short sentences, naming
@@ -480,6 +485,7 @@ async function safetyBrief(body: Record<string, unknown>) {
     model: MODELS.haiku,
     maxTokens: 550,
     cacheable: true,
+    timeoutMs: 25_000,
     system: [
       sys(`You brief a delivery rider on today's riding conditions in ${language}.
 The weather data is real and measured - use those exact numbers.

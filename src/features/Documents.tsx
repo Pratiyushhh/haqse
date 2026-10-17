@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
+import { PhotoPicker } from '../components/PhotoPicker';
 import { Busy, Card, ErrorNote } from '../components/ui';
 import { callAI, compressImage } from '../lib/api';
 import { daysUntil, newId, type AppState, type DocRecord } from '../lib/store';
@@ -39,7 +40,6 @@ export default function Documents({
   state: AppState;
   addDocument: (d: DocRecord) => void;
 }) {
-  const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,21 +78,12 @@ export default function Documents({
       title="Kaagaz — your documents"
       sub="Photograph a licence, RC, insurance or PUC. The app reads the expiry date and warns you before it runs out."
     >
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="sr-only"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) void onFile(f);
-          e.target.value = '';
-        }}
+      <PhotoPicker
+        disabled={busy}
+        onFile={(f) => void onFile(f)}
+        cameraLabel="📄 Take a photo"
+        galleryLabel="🖼 Choose from gallery"
       />
-      <button className="primary" onClick={() => fileRef.current?.click()} disabled={busy}>
-        📄 Photograph a document
-      </button>
       {busy && <Busy label="Reading the document…" />}
       <ErrorNote error={error} />
 

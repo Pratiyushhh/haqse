@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
+import { PhotoPicker } from '../components/PhotoPicker';
 import { Busy, Card, ErrorNote, Stat } from '../components/ui';
 import { callAI, compressImage } from '../lib/api';
 import {
@@ -39,7 +40,6 @@ export default function Ledger({
   addEarning: (e: Earning) => void;
   addExpense: (e: Expense) => void;
 }) {
-  const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<Extraction | null>(null);
@@ -98,21 +98,12 @@ export default function Ledger({
         title="Add a payout or a bill"
         sub="Take a photo. No typing. The app reads it and works out what you actually kept."
       >
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="sr-only"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) void onFile(f);
-            e.target.value = '';
-          }}
+        <PhotoPicker
+          disabled={busy}
+          onFile={(f) => void onFile(f)}
+          cameraLabel="📷 Take a photo"
+          galleryLabel="🖼 Choose from gallery"
         />
-        <button className="primary" onClick={() => fileRef.current?.click()} disabled={busy}>
-          📷 Photograph payout or bill
-        </button>
         {busy && <Busy label="Reading your photo…" />}
         <ErrorNote error={error} />
 

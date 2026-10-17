@@ -6,7 +6,9 @@ import Ledger from './features/Ledger';
 import Saathi from './features/Saathi';
 import Safety from './features/Safety';
 import Schemes from './features/Schemes';
-import { aiLog, CITIES, onAiLog } from './lib/api';
+import { aiLog, onAiLog } from './lib/api';
+import { citiesOf, STATE_NAMES, STATES, WAGES_VERIFIED } from './data/places';
+import Tour, { hasSeenTour } from './components/Tour';
 import { LANGUAGES, useAppState } from './lib/store';
 
 type Tab = 'home' | 'saathi' | 'haq' | 'likho' | 'kaagaz' | 'surakshit';
@@ -25,6 +27,8 @@ export default function App() {
     useAppState();
   const [tab, setTab] = useState<Tab>('home');
   const [panel, setPanel] = useState<'none' | 'settings' | 'ailog'>('none');
+  // Checked once on mount, not on every render, so dismissing it is instant.
+  const [showTour, setShowTour] = useState(() => !hasSeenTour());
 
   if (!state.profile.onboarded) {
     return <Onboarding onDone={(p) => updateProfile({ ...p, onboarded: true })} />;
@@ -32,6 +36,7 @@ export default function App() {
 
   return (
     <div className="app">
+      {showTour && <Tour onClose={() => setShowTour(false)} />}
       <header className="topbar">
         <div className="logo">
           Haq<span>Se</span>
@@ -55,7 +60,15 @@ export default function App() {
 
       <main>
         {panel === 'settings' && (
-          <Settings state={state} updateProfile={updateProfile} reset={reset} />
+          <Settings
+            state={state}
+            updateProfile={updateProfile}
+            reset={reset}
+            replayTour={() => {
+              setPanel('none');
+              setShowTour(true);
+            }}
+          />
         )}
         {panel === 'ailog' && <AiLogPanel />}
 
@@ -99,6 +112,7 @@ export default function App() {
 function Onboarding({ onDone }: { onDone: (p: Record<string, unknown>) => void }) {
   const [name, setName] = useState('');
   const [language, setLanguage] = useState('Hindi');
+  const [stateName, setStateName] = useState('Delhi');
   const [city, setCity] = useState('Delhi');
   const [age, setAge] = useState(28);
   const [monthlyIncome, setMonthlyIncome] = useState(14000);
@@ -125,12 +139,33 @@ function Onboarding({ onDone }: { onDone: (p: Record<string, unknown>) => void }
           ))}
         </select>
 
-        <label htmlFor="o-city">City you work in</label>
+        <label htmlFor="o-state">State you work in</label>
+        <select
+          id="o-state"
+          value={stateName}
+          onChange={(e) => {
+            const next = e.target.value;
+            setStateName(next);
+            // Keep the pair valid: a city must belong to the chosen state.
+            setCity(citiesOf(next)[0] ?? '');
+          }}
+        >
+          {STATE_NAMES.map((st) => (
+            <option key={st}>{st}</option>
+          ))}
+        </select>
+        <p className="muted">
+          Your state decides which schemes you qualify for and the minimum wage you are compared
+          against.
+        </p>
+
+        <label htmlFor="o-city">Nearest city</label>
         <select id="o-city" value={city} onChange={(e) => setCity(e.target.value)}>
-          {Object.keys(CITIES).map((c) => (
+          {citiesOf(stateName).map((c) => (
             <option key={c}>{c}</option>
           ))}
         </select>
+        <p className="muted">Used for live weather and the safety advice.</p>
 
         <div className="row">
           <div>
@@ -172,7 +207,7 @@ function Onboarding({ onDone }: { onDone: (p: Record<string, unknown>) => void }
               name,
               language,
               city,
-              state: CITIES[city]?.state ?? 'Delhi',
+              state: stateName,
               age,
               monthlyIncome,
               dependents,
@@ -192,10 +227,12 @@ function Settings({
   state,
   updateProfile,
   reset,
+  replayTour,
 }: {
   state: ReturnType<typeof useAppState>['state'];
   updateProfile: ReturnType<typeof useAppState>['updateProfile'];
   reset: () => void;
+  replayTour: () => void;
 }) {
   const p = state.profile;
   return (
@@ -207,15 +244,27 @@ function Settings({
         ))}
       </select>
 
-      <label htmlFor="s-city">City</label>
+      <label htmlFor="s-state">State</label>
       <select
-        id="s-city"
-        value={p.city}
-        onChange={(e) =>
-          updateProfile({ city: e.target.value, state: CITIES[e.target.value]?.state ?? 'Delhi' })
-        }
+        id="s-state"
+        value={p.state}
+        onChange={(e) => {
+          const next = e.target.value;
+          updateProfile({ state: next, city: citiesOf(next)[0] ?? '' });
+        }}
       >
-        {Object.keys(CITIES).map((c) => (
+        {STATE_NAMES.map((st) => (
+          <option key={st}>{st}</option>
+        ))}
+      </select>
+      <p className="muted">
+        Minimum wage here is about ₹{Math.round((STATES[p.state]?.minWagePerDay ?? 400) / 8)} an
+        hour for unskilled work (approximate, checked {WAGES_VERIFIED}).
+      </p>
+
+      <label htmlFor="s-city">City</label>
+      <select id="s-city" value={p.city} onChange={(e) => updateProfile({ city: e.target.value })}>
+        {citiesOf(p.state).map((c) => (
           <option key={c}>{c}</option>
         ))}
       </select>
@@ -265,7 +314,13 @@ function Settings({
         onChange={(e) => updateProfile({ monthlyIncome: Number(e.target.value) })}
       />
 
-      <button style={{ marginTop: 16 }} onClick={() => confirm('Erase everything on this phone?') && reset()}>
+      <button style={{ marginTop: 16, width: '100%' }} onClick={replayTour}>
+        ↺ Show me the tour again
+      </button>
+      <button
+        style={{ marginTop: 10, width: '100%' }}
+        onClick={() => confirm('Erase everything on this phone?') && reset()}
+      >
         Erase all my data
       </button>
     </Card>

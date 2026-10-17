@@ -208,3 +208,53 @@ pre.letter {
 .muted { color: var(--muted); font-size: 14px; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 td, th { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+
+/* ---------- first-run tour ---------- */
+.tour-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.62);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+}
+@media (min-width: 560px) {
+  .tour-backdrop { align-items: center; }
+}
+.tour-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 20px;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+}
+.tour-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.tour-icon {
+  font-size: 30px;
+  background: var(--surface-2);
+  border-radius: 12px;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tour-card h2 { margin: 6px 0 8px; font-size: 20px; line-height: 1.3; }
+.tour-card p { margin: 0 0 14px; color: var(--muted); }
+.tour-dots { display: flex; gap: 6px; margin: 4px 0 16px; }
+.tour-dots .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--line);
+}
+.tour-dots .dot.on { background: var(--brand); width: 22px; }

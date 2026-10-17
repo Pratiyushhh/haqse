@@ -7,6 +7,8 @@
  * compute.
  */
 
+import { minWagePerDay } from '../data/places';
+
 export type Earning = {
   id: string;
   platform: string;
@@ -69,22 +71,13 @@ export function computeTotals(earnings: Earning[], expenses: Expense[]): Totals 
 
 export const round2 = (n: number): number => Math.round(n * 100) / 100;
 
-/** Minimum wage for unskilled work, rupees per 8-hour day. Source: state labour notifications. */
-export const MIN_WAGE_PER_DAY: Record<string, number> = {
-  Delhi: 18456 / 26,
-  Karnataka: 15423 / 26,
-  Maharashtra: 14000 / 26,
-  Rajasthan: 7488 / 26,
-  Telangana: 11000 / 26,
-  'Tamil Nadu': 12000 / 26,
-  'West Bengal': 10374 / 26,
-  Gujarat: 12324 / 26,
-  Other: 12000 / 26,
-};
-
+/**
+ * Minimum wage for unskilled work, converted to an hourly rate from the
+ * state'''s notified daily rate. The table itself lives beside the state and
+ * city data in src/data/places.ts, so a state has exactly one record.
+ */
 export function minWageHourly(state: string): number {
-  const perDay = MIN_WAGE_PER_DAY[state] ?? MIN_WAGE_PER_DAY.Other!;
-  return round2(perDay / 8);
+  return round2(minWagePerDay(state) / 8);
 }
 
 export type WageVerdict = {

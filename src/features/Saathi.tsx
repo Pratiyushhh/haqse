@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Busy, Card, ErrorNote, MicButton, speak } from '../components/ui';
+import { Busy, Card, ErrorNote, MicButton, plainText, SpeakButton } from '../components/ui';
 import { callAI } from '../lib/api';
 import { computeTotals, detectAnomalies } from '../lib/money';
 import type { AppState } from '../lib/store';
@@ -64,8 +64,9 @@ export default function Saathi({ state }: { state: AppState }) {
         language: profile.language,
         context: buildContext(),
       });
-      setTurns((t) => [...t, { role: 'saathi', text: answer }]);
-      speak(answer, profile.language);
+      // Deliberately silent: the reply is shown, and read aloud only if the
+      // worker asks for it with the Read aloud button.
+      setTurns((t) => [...t, { role: 'saathi', text: plainText(answer) }]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not reach Saathi.');
     } finally {
@@ -98,6 +99,11 @@ export default function Saathi({ state }: { state: AppState }) {
           >
             <strong>{t.role === 'you' ? 'You' : 'Saathi'}</strong>
             {t.text}
+            {t.role === 'saathi' && (
+              <div style={{ marginTop: 8 }}>
+                <SpeakButton text={t.text} language={profile.language} />
+              </div>
+            )}
           </div>
         ))}
       </div>
