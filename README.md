@@ -140,6 +140,11 @@ Deploy: push to GitHub, import into Vercel, set `ANTHROPIC_API_KEY` as an enviro
 **No login.** There are no credentials to share because there is no account — an evaluator opens
 the URL, answers six questions and has the whole app. Nothing is gated.
 
+**Sample images for testing.** The camera features need Indian payout screens and documents that
+a reviewer is unlikely to have to hand, so six synthetic ones are in [`samples/`](samples/) with
+an upload order and what each should produce. They are drawn from scratch by a committed script,
+and the identity documents are visibly marked SAMPLE.
+
 ---
 
 ## 6. Evaluation notes
